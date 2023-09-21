@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.10.2)
 project(ardrone_autonomy)
 
 # Load catkin and all dependencies required for this package
@@ -7,10 +7,11 @@ find_package(catkin REQUIRED COMPONENTS
     image_transport
     sensor_msgs
     std_srvs
-    tf
+    tf2_ros  # Alterado de tf2
     camera_info_manager
     message_generation
     roslint
+    geometry_msgs
 )
 
 add_service_files(
@@ -63,21 +64,20 @@ add_message_files(
 generate_messages(DEPENDENCIES geometry_msgs std_msgs)
 
 catkin_package(
-  DEPENDS libsdl-dev
   CATKIN_DEPENDS
     roscpp
     image_transport
     message_runtime
     sensor_msgs
     std_srvs
-    tf
+    tf2_ros  # Alterado de tf2
     camera_info_manager
 )
 
-# Build [pathced] ardronelib from an external project
+# Build [patched] ardronelib from an external project
 include(ExternalProject)
 ExternalProject_Add(ardronelib
-    GIT_REPOSITORY git://github.com/AutonomyLab/ardronelib.git
+    GIT_REPOSITORY https://github.com/AutonomyLab/ardronelib.git
     GIT_TAG 2f987029c55531e4c0119c3600f9c57f935851ed
     PREFIX ${CATKIN_DEVEL_PREFIX}
     CONFIGURE_COMMAND echo "No configure"
@@ -101,14 +101,7 @@ link_directories(${CATKIN_DEVEL_PREFIX}/lib/ardrone)
 # Add CATKIN_INCLUDE_DIRS
 include_directories(${catkin_INCLUDE_DIRS})
 
-# Add Boost_INCLUDE_DIRS
-include_directories(${Boost_INCLUDE_DIRS})
-
-# Add headers directory
-include_directories(include)
-
 # Set SOURCE and HEADER files
-
 set(AA_HEADERS
     include/ardrone_autonomy/ardrone_driver.h
     include/ardrone_autonomy/video.h
@@ -134,18 +127,19 @@ target_link_libraries(
     vlib
     sdk
     SDL
-    ${Boost_LIBRARIES}
     ${catkin_LIBRARIES}
 )
 
-add_dependencies(ardrone_driver ardronelib ${PROJECT_NAME}_gencpp)
+add_dependencies(ardrone_driver ardronelib ${PROJECT_NAME}_generate_messages_cpp)
 
 # roslint
 set(ROSLINT_CPP_OPTS "--filter=-runtime/references-runtime/threadsafe_fn")
 roslint_cpp(${AA_HEADERS} ${AA_SOURCES})
 
 # Install Rules
-install(TARGETS ardrone_driver RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+install(TARGETS ardrone_driver
+    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
 install(DIRECTORY launch/
     DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
     PATTERN ".git" EXCLUDE
